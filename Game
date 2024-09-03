@@ -1,0 +1,239 @@
+# File: README.md
+
+# Space Shooter Game
+
+A simple space shooter game created with Python and Pygame.
+
+## Description
+
+In this game, you control a spaceship at the bottom of the screen. Your goal is to shoot incoming asteroids while avoiding collisions. Use the left and right arrow keys to move and the spacebar to shoot.
+
+## Installation
+
+1. Ensure you have Python 3.x installed on your system.
+2. Install Pygame by running:
+   ```
+   pip install pygame
+   ```
+3. Clone this repository:
+   ```
+   git clone https://github.com/yourusername/space-shooter-game.git
+   ```
+4. Navigate to the game directory:
+   ```
+   cd space-shooter-game
+   ```
+
+## Usage
+
+Run the game by executing:
+```
+python space_shooter.py
+```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+# File: LICENSE
+
+MIT License
+
+Copyright (c) [year] [fullname]
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+# File: space_shooter.py
+
+import pygame
+import random
+
+# Game constants
+WIDTH = 800
+HEIGHT = 600
+FPS = 60
+
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.Surface((50, 50), pygame.SRCALPHA)
+        pygame.draw.polygon(self.image, WHITE, [(0, 50), (25, 0), (50, 50)])
+        self.rect = self.image.get_rect()
+        self.rect.centerx = WIDTH // 2
+        self.rect.bottom = HEIGHT - 10
+        self.speed = 5
+
+    def update(self):
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT] and self.rect.left > 0:
+            self.rect.x -= self.speed
+        if keys[pygame.K_RIGHT] and self.rect.right < WIDTH:
+            self.rect.x += self.speed
+
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.Surface((5, 10))
+        self.image.fill(WHITE)
+        self.rect = self.image.get_rect()
+        self.rect.centerx = x
+        self.rect.bottom = y
+        self.speed = 7
+
+    def update(self):
+        self.rect.y -= self.speed
+        if self.rect.bottom < 0:
+            self.kill()
+
+class Asteroid(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.Surface((30, 30))
+        pygame.draw.circle(self.image, RED, (15, 15), 15)
+        self.rect = self.image.get_rect()
+        self.rect.x = random.randint(0, WIDTH - self.rect.width)
+        self.rect.y = random.randint(-100, -50)
+        self.speed = random.randint(1, 4)
+
+    def update(self):
+        self.rect.y += self.speed
+        if self.rect.top > HEIGHT:
+            self.kill()
+
+class Game:
+    def __init__(self):
+        pygame.init()
+        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        pygame.display.set_caption("Space Shooter")
+        self.clock = pygame.time.Clock()
+        self.font = pygame.font.Font(None, 36)
+        self.score = 0
+        self.running = True
+        self.all_sprites = pygame.sprite.Group()
+        self.bullets = pygame.sprite.Group()
+        self.asteroids = pygame.sprite.Group()
+        self.player = Player()
+        self.all_sprites.add(self.player)
+
+    def run(self):
+        while self.running:
+            self.clock.tick(FPS)
+            self.events()
+            self.update()
+            self.draw()
+        self.game_over()
+
+    def events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    bullet = Bullet(self.player.rect.centerx, self.player.rect.top)
+                    self.all_sprites.add(bullet)
+                    self.bullets.add(bullet)
+
+    def update(self):
+        self.all_sprites.update()
+        
+        # Spawn asteroids
+        if len(self.asteroids) < 5:
+            asteroid = Asteroid()
+            self.all_sprites.add(asteroid)
+            self.asteroids.add(asteroid)
+        
+        # Check for collisions
+        hits = pygame.sprite.groupcollide(self.bullets, self.asteroids, True, True)
+        for hit in hits:
+            self.score += 1
+        
+        if pygame.sprite.spritecollide(self.player, self.asteroids, False):
+            self.running = False
+
+    def draw(self):
+        self.screen.fill(BLACK)
+        self.all_sprites.draw(self.screen)
+        score_text = self.font.render(f"Score: {self.score}", True, WHITE)
+        self.screen.blit(score_text, (10, 10))
+        pygame.display.flip()
+
+    def game_over(self):
+        game_over_text = self.font.render("Game Over", True, WHITE)
+        game_over_rect = game_over_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        self.screen.blit(game_over_text, game_over_rect)
+        pygame.display.flip()
+        pygame.time.wait(2000)
+
+if __name__ == "__main__":
+    game = Game()
+    game.run()
+    pygame.quit()
+
+# File: .gitignore
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+
+# Operating System Files
+.DS_Store
+Thumbs.db
